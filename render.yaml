@@ -1,9 +1,9 @@
 services:
-  # ── Website + Telegram Webhook ──
+  # ── Website + Telegram Webhook (FREE tier) ──
   - type: web
     name: nursahifa
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm install && npm run build
     startCommand: node .output/server/index.mjs
     healthCheckPath: /
@@ -27,23 +27,4 @@ services:
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_PUBLISHABLE_KEY
-        sync: false
-
-  # ── Telegram Bot Polling Worker ──
-  - type: worker
-    name: nursahifa-bot
-    runtime: node
-    plan: starter
-    buildCommand: npm install
-    startCommand: node scripts/bot-poll.mjs
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: GROQ_API_KEY
-        sync: false
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
