@@ -1,0 +1,1 @@
+ALTER TABLE public.words ADD COLUMN IF NOT EXISTS example_uz TEXT;
