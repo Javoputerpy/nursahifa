@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { callGroq } from "@/lib/groq";
 
-const WEB_APP_URL = "https://nursahifa.lovable.app/auth";
-const GEMINI_MODEL = "gemini-2.5-flash";
+const WEB_APP_URL = "https://nursahifa.onrender.com/auth";
 
 const BTN_APP = "🚀 Ilovani ochish";
 const BTN_AI = "🧠 AI Yordamchi";
@@ -63,27 +63,20 @@ async function tg(token: string, method: string, body: unknown): Promise<any> {
   return j;
 }
 
-async function askGemini(apiKey: string, prompt: string): Promise<string> {
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 600 },
-      }),
-    },
-  );
-  if (!r.ok) {
-    console.error("gemini", r.status, await r.text());
+async function askGroq(prompt: string): Promise<string> {
+  try {
+    const answer = await callGroq(
+      [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: prompt },
+      ],
+      { temperature: 0.7 },
+    );
+    return answer || "Javob topilmadi.";
+  } catch (e) {
+    console.error("groq ask error", e);
     return "Kechirasiz, hozir javob bera olmadim. Birozdan keyin qayta urinib ko'ring.";
   }
-  const j: any = await r.json();
-  const parts = j?.candidates?.[0]?.content?.parts;
-  const text = Array.isArray(parts) ? parts.map((p: any) => p?.text ?? "").join("").trim() : "";
-  return text || "Javob topilmadi.";
 }
 
 function deriveSecret(token: string): string {
@@ -116,7 +109,6 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
     handlers: {
       POST: async ({ request }) => {
         const token = process.env.TELEGRAM_BOT_TOKEN;
-        const geminiKey = process.env.GOOGLE_AI_API_KEY;
         const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
         if (!token) return new Response("bot token missing", { status: 500 });
 
@@ -285,17 +277,13 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             return Response.json({ ok: true });
           }
 
-          // === AI MODE or free text → Gemini ===
+          // === AI MODE or free text → Groq ===
           if (text) {
-            if (!geminiKey) {
-              await tg(token, "sendMessage", { chat_id: chatId, text: "AI hozircha sozlanmagan." });
-            } else {
-              await tg(token, "sendChatAction", { chat_id: chatId, action: "typing" });
-              const answer = await askGemini(geminiKey, text);
-              await tg(token, "sendMessage", {
-                chat_id: chatId, text: answer, reply_markup: replyKeyboard(),
-              });
-            }
+            await tg(token, "sendChatAction", { chat_id: chatId, action: "typing" });
+            const answer = await askGroq(text);
+            await tg(token, "sendMessage", {
+              chat_id: chatId, text: answer, reply_markup: replyKeyboard(),
+            });
           }
         } catch (e) {
           console.error("handler error", e);

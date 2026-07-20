@@ -79,7 +79,7 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
                   text,
                   reply_markup: {
                     inline_keyboard: [[
-                      { text: "🚀 Darsni boshlash", web_app: { url: "https://nursahifa.lovable.app/feed" } },
+                      { text: "🚀 Darsni boshlash", web_app: { url: "https://nursahifa.onrender.com/feed" } },
                     ]],
                   },
                 }),
